@@ -10,14 +10,14 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:color-term.helloWorld"
+    "onCommand:colorTerm.create"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "color-term.helloWorld",
-        "title": "Hello World"
+        "command": "colorTerm.create",
+        "title": "ColorTerm: Create"
       }
     ]
   },
