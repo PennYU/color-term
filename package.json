@@ -29,7 +29,9 @@
 						"type": "string",
 						"enum": [
 							"red",
-							"yellow"
+							"green",
+							"yellow",
+							"blue"
 						],
 						"default": "red",
 						"description": "Highlight Color",

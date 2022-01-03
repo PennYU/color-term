@@ -3,6 +3,14 @@
 import * as vscode from 'vscode';
 import * as os from 'os';
 
+
+const COLORS: {[key: string]: string} = {
+	"red": "\u001b[31m",
+	"green": "\u001b[32m",
+	"yellow": "\u001b[33m",
+	"blue": "\u001b[34m"
+};
+
 const shell = os.platform() === 'win32' ? 'powershell.exe' : 'bash';
 
 // this method is called when your extension is activated
@@ -14,7 +22,7 @@ export function activate(context: vscode.ExtensionContext) {
 	console.log('Congratulations, your extension "color-term" is now active!');
 
 
-	const color = vscode.workspace.getConfiguration().get<string>('conf.colorTerm.highlightColor');
+	const color = vscode.workspace.getConfiguration().get<string>('conf.colorTerm.highlightColor') || 'red';
 	const keywords = vscode.workspace.getConfiguration().get<string[]>('conf.colorTerm.highlightKeywords') || [];
 
 	// The command has been defined in the package.json file
@@ -57,7 +65,7 @@ export function activate(context: vscode.ExtensionContext) {
 			let [index, kw] = getIndexOf(data);
 			if (index >= 0) {
 				writeEmitter.fire(data.substring(0, index));
-				writeEmitter.fire('\u001b[31m');
+				writeEmitter.fire(COLORS[color]);
 				writeEmitter.fire(kw);
 				writeEmitter.fire('\u001b[0m');
 				colorTextFunc(data.substring(index + kw.length));
