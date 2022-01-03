@@ -19,6 +19,31 @@
         "command": "colorTerm.create",
         "title": "ColorTerm: Create"
       }
+    ],
+    "configuration": [
+      {
+        "id": "highlightSets",
+				"title": "ColorTerm",
+				"properties": {
+          "conf.colorTerm.highlightColor": {
+						"type": "string",
+						"enum": [
+							"red",
+							"yellow"
+						],
+						"default": "red",
+						"description": "Highlight Color",
+						"scope": "window"
+					},
+					"conf.colorTerm.highlightKeywords": {
+            "type": "array",
+            "description": "Keywords to highlight",
+            "items": {
+              "type": "string" 
+            }
+					}
+        }
+      }
     ]
   },
   "scripts": {

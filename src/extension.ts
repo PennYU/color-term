@@ -13,6 +13,10 @@ export function activate(context: vscode.ExtensionContext) {
 	// This line of code will only be executed once when your extension is activated
 	console.log('Congratulations, your extension "color-term" is now active!');
 
+
+	const color = vscode.workspace.getConfiguration().get<string>('conf.colorTerm.highlightColor');
+	const keywords = vscode.workspace.getConfiguration().get<string[]>('conf.colorTerm.highlightKeywords') || [];
+
 	// The command has been defined in the package.json file
 	// Now provide the implementation of the command with registerCommand
 	// The commandId parameter must match the command field in package.json
@@ -49,18 +53,34 @@ export function activate(context: vscode.ExtensionContext) {
 		});
 		terminal.show();
 
-		function colorText(data: string) {
-			let index = data.indexOf("error");
+		function colorTextFunc(data: string) {
+			let [index, kw] = getIndexOf(data);
 			if (index >= 0) {
 				writeEmitter.fire(data.substring(0, index));
 				writeEmitter.fire('\u001b[31m');
-				writeEmitter.fire('error');
+				writeEmitter.fire(kw);
 				writeEmitter.fire('\u001b[0m');
-				colorText(data.substring(index + 'error'.length));
+				colorTextFunc(data.substring(index + kw.length));
 			} else {
 				writeEmitter.fire(data);
 			}
 		}
+
+		function getIndexOf(data: string): [number, string] {
+			for (let i=0; i<keywords.length; i++) {
+				let index = data.indexOf(keywords[i]);
+				if (index >= 0) {
+					return [index, keywords[i]];	
+				}
+			}
+			return [-1, ""];
+		}
+
+		function normalTextFunc(data: string) {
+			writeEmitter.fire(data);
+		}
+
+		const colorText =  keywords.length > 0 ? colorTextFunc : normalTextFunc; 
 	});
 
 	context.subscriptions.push(disposable);
