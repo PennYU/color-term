@@ -68,3 +68,9 @@ Ensure that you've read through the extensions guidelines and follow the best pr
 * [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
 
 **Enjoy!**
+
+## Contributing
+
+* build `node-pty`
+`HOME=~/.electron-gyp node-gyp rebuild --target=13.5.2 --arch=x64 --target_platform=darwin` or 
+`HOME=~/.electron-gyp node-gyp rebuild --target=13.5.2 --arch=x64 --target_platform=darwin --debug`
