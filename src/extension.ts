@@ -3,7 +3,7 @@
 import * as vscode from 'vscode';
 import * as os from 'os';
 
-
+const NAME = "ColorTerm";
 const COLORS: {[key: string]: string} = {
 	"red": "\u001b[31m",
 	"green": "\u001b[32m",
@@ -13,6 +13,82 @@ const COLORS: {[key: string]: string} = {
 
 const shell = os.platform() === 'win32' ? 'powershell.exe' : 'bash';
 
+function getCoreNodeModule(moduleName: string) {
+    try {
+        return require(`${vscode.env.appRoot}/node_modules.asar/${moduleName}`);
+    } catch (err) {
+		console.log(`import "${moduleName}" failed.`);
+	 }
+
+    try {
+        return require(`${vscode.env.appRoot}/node_modules/${moduleName}`);
+    } catch (err) { 
+		console.log(`import "${moduleName}" failed.`);
+	}
+
+    return null;
+}
+
+function colorTextFunc(data: string, keywords: string[], color:string, writeEmitter: vscode.EventEmitter<string>) {
+	let [index, kw] = getIndexOf(data, keywords);
+	if (index >= 0) {
+		writeEmitter.fire(data.substring(0, index));
+		writeEmitter.fire(COLORS[color]);
+		writeEmitter.fire(kw);
+		writeEmitter.fire('\u001b[0m');
+		colorTextFunc(data.substring(index + kw.length), keywords, color, writeEmitter);
+	} else {
+		writeEmitter.fire(data);
+	}
+}
+
+function getIndexOf(data: string, keywords: string[]): [number, string] {
+	for (let i=0; i<keywords.length; i++) {
+		let index = data.indexOf(keywords[i]);
+		if (index >= 0) {
+			return [index, keywords[i]];	
+		}
+	}
+	return [-1, ""];
+}
+
+function createPtyOptions(keywords: string[], color: string) {
+	let ptyProcess: any; 
+	const writeEmitter = new vscode.EventEmitter<string>();
+	const closeEmitter = new vscode.EventEmitter<void>();
+	const pty = {
+		onDidWrite: writeEmitter.event,
+		onDidClose: closeEmitter.event,
+		open: (initialDimensions: vscode.TerminalDimensions | undefined): void => { 
+			const nodePty = getCoreNodeModule('node-pty');
+			const writeEmitter = new vscode.EventEmitter<string>();
+			const ptyProcess = nodePty.spawn(shell, [], {
+				name: 'xterm-color',
+				cols: initialDimensions?.columns || 80,
+				rows: initialDimensions?.rows || 30,
+				cwd: process.env.HOME,
+				env: process.env
+			});
+			ptyProcess.on('data', (data: string) => {
+				colorTextFunc(data, keywords, color, writeEmitter);
+			});
+			ptyProcess.on('exit', () => {
+				closeEmitter.fire();
+			});
+		},
+		close: () => { 
+			ptyProcess?.kill();
+		},
+		setDimensions: (dimensions: vscode.TerminalDimensions): void => {
+			ptyProcess?.resize(dimensions.columns, dimensions.rows);
+		},
+		handleInput: async (char: string) => {
+			ptyProcess?.write(char);
+		},
+	};
+	return {name: NAME, pty};
+}
+
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
@@ -20,10 +96,6 @@ export function activate(context: vscode.ExtensionContext) {
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
 	console.log('Congratulations, your extension "color-term" is now active!');
-
-
-	const color = vscode.workspace.getConfiguration().get<string>('conf.colorTerm.highlightColor') || 'red';
-	const keywords = vscode.workspace.getConfiguration().get<string[]>('conf.colorTerm.highlightKeywords') || [];
 
 	// The command has been defined in the package.json file
 	// Now provide the implementation of the command with registerCommand
@@ -33,65 +105,23 @@ export function activate(context: vscode.ExtensionContext) {
 		// Display a message box to the user
 		vscode.window.showInformationMessage('Hello World from color-term!');
 
-		const nodePty = require('node-pty');
-		const writeEmitter = new vscode.EventEmitter<string>();
-		const ptyProcess = nodePty.spawn(shell, [], {
-			name: 'xterm-color',
-			cols: 80,
-			rows: 30,
-			cwd: process.env.HOME,
-			env: process.env
-		});
-
-		ptyProcess.on('data', function (data: string) {
-			colorText(data);
-		});
-
-		const pty = {
-			onDidWrite: writeEmitter.event,
-			open: () => { },
-			close: () => { },
-			handleInput: async (char: string) => {
-				ptyProcess.write(char);
-			},
-		};
-		const terminal = (<any>vscode.window).createTerminal({
-			name: `ColorTerm`,
-			pty,
-		});
+		const color = vscode.workspace.getConfiguration().get<string>('colorTerm.highlightColor') || 'red';
+		const keywords = vscode.workspace.getConfiguration().get<string[]>('colorTerm.highlightKeywords') || [];
+		const ptyOptions = createPtyOptions(keywords, color);	
+		const terminal = (<any>vscode.window).createTerminal(ptyOptions);
 		terminal.show();
-
-		function colorTextFunc(data: string) {
-			let [index, kw] = getIndexOf(data);
-			if (index >= 0) {
-				writeEmitter.fire(data.substring(0, index));
-				writeEmitter.fire(COLORS[color]);
-				writeEmitter.fire(kw);
-				writeEmitter.fire('\u001b[0m');
-				colorTextFunc(data.substring(index + kw.length));
-			} else {
-				writeEmitter.fire(data);
-			}
-		}
-
-		function getIndexOf(data: string): [number, string] {
-			for (let i=0; i<keywords.length; i++) {
-				let index = data.indexOf(keywords[i]);
-				if (index >= 0) {
-					return [index, keywords[i]];	
-				}
-			}
-			return [-1, ""];
-		}
-
-		function normalTextFunc(data: string) {
-			writeEmitter.fire(data);
-		}
-
-		const colorText =  keywords.length > 0 ? colorTextFunc : normalTextFunc; 
 	});
-
 	context.subscriptions.push(disposable);
+
+	const terminalProfile = vscode.window.registerTerminalProfileProvider( 'colorTerm.terminalProfile', {
+		provideTerminalProfile: () => {
+			const color = vscode.workspace.getConfiguration().get<string>('colorTerm.highlightColor') || 'red';
+			const keywords = vscode.workspace.getConfiguration().get<string[]>('colorTerm.highlightKeywords') || [];
+			const ptyOptions = createPtyOptions(keywords, color);	
+			return new vscode.TerminalProfile(ptyOptions);
+		},
+	});
+	context.subscriptions.push(terminalProfile);
 }
 
 // this method is called when your extension is deactivated

@@ -20,12 +20,20 @@
         "title": "ColorTerm: Create"
       }
     ],
+    "terminal": {
+			"profiles": [
+				{
+					"id": "colorTerm.terminalProfile",
+					"title": "ColorTerm"
+				}
+			]
+		},
     "configuration": [
       {
         "id": "highlightSets",
 				"title": "ColorTerm",
 				"properties": {
-          "conf.colorTerm.highlightColor": {
+          "colorTerm.highlightColor": {
 						"type": "string",
 						"enum": [
 							"red",
@@ -37,7 +45,7 @@
 						"description": "Highlight Color",
 						"scope": "window"
 					},
-					"conf.colorTerm.highlightKeywords": {
+					"colorTerm.highlightKeywords": {
             "type": "array",
             "description": "Keywords to highlight",
             "items": {
