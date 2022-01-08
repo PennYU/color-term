@@ -60,7 +60,7 @@ function createPtyOptions(keywords: string[], color: string) {
 	const pty = {
 		onDidWrite: writeEmitter.event,
 		onDidClose: closeEmitter.event,
-		open: (initialDimensions: vscode.TerminalDimensions | undefined): void => { 
+		open: (initialDimensions: vscode.TerminalDimensions | undefined) => { 
 			ptyProcess = nodePty.spawn(shell, [], {
 				name: 'xterm-color',
 				cols: initialDimensions?.columns || 80,
@@ -73,12 +73,16 @@ function createPtyOptions(keywords: string[], color: string) {
 			});
 			ptyProcess.on('exit', () => {
 				closeEmitter.fire();
+				writeEmitter.dispose();
+				closeEmitter.dispose();
 			});
 		},
 		close: () => { 
 			ptyProcess?.kill();
+			writeEmitter.dispose();
+			closeEmitter.dispose();
 		},
-		setDimensions: (dimensions: vscode.TerminalDimensions): void => {
+		setDimensions: (dimensions: vscode.TerminalDimensions) => {
 			ptyProcess?.resize(dimensions.columns, dimensions.rows);
 		},
 		handleInput: async (char: string) => {
