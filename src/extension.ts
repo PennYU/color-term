@@ -54,15 +54,14 @@ function getIndexOf(data: string, keywords: string[]): [number, string] {
 
 function createPtyOptions(keywords: string[], color: string) {
 	let ptyProcess: any; 
+	const nodePty = getCoreNodeModule('node-pty');
 	const writeEmitter = new vscode.EventEmitter<string>();
 	const closeEmitter = new vscode.EventEmitter<void>();
 	const pty = {
 		onDidWrite: writeEmitter.event,
 		onDidClose: closeEmitter.event,
 		open: (initialDimensions: vscode.TerminalDimensions | undefined): void => { 
-			const nodePty = getCoreNodeModule('node-pty');
-			const writeEmitter = new vscode.EventEmitter<string>();
-			const ptyProcess = nodePty.spawn(shell, [], {
+			ptyProcess = nodePty.spawn(shell, [], {
 				name: 'xterm-color',
 				cols: initialDimensions?.columns || 80,
 				rows: initialDimensions?.rows || 30,
